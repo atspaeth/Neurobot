@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 import numpy as np
 from neurobot import Neurobot
+import os
+from itertools import chain
 
 if __name__ == '__main__':
     import argparse
@@ -15,30 +17,32 @@ if __name__ == '__main__':
             help='integral control gain')
     parser.add_argument('-t', '--time-constant', default=1000,
             type=float, help='integral decay time constant (ms)')
-    parser.add_argument('logfile', nargs='?', 
-            help='optional file to log to')
+    parser.add_argument('datalog', nargs='?', default=os.devnull,
+            help='optional file to datalog to')
     args = parser.parse_args()
 
     kp = args.proportional
     ki = args.integral
     tau = args.time_constant
 
-    with Neurobot(pwm_max=args.pwm_max) as nb:
+    with Neurobot(pwm_max=args.pwm_max, 
+            datalog=args.datalog, dt_ms=1) as nb:
 
+        # Emit a list of the variables to be logged.
+        nb.log(',A0,A1,A2,A3,C0,C1,C2,C3')
+
+        print('Starting simulation...')
         interr = np.zeros(4)
-
         for t in nb.event_loop():
+
             pos = nb.read_adcs()
 
             err = pos - 0.5
             control = -kp*err - ki*interr
-            interr += nb.DT/tau*(err - interr)
+            interr += nb.dt_ms()/tau*(err - interr)
+
+            # Emit the actual values of the variables.
+            nb.log(f',{pos[0]},{pos[1]},{pos[2]},{pos[3]},{control[0]},{control[1]},{control[2]},{control[3]}')
 
             # nb.apply_actuators(control)
-
-            if int(t/nb.DT) % 1000 == 0:
-                print(f'At time {t}, position = {pos}')
-                print(f'  Control: {control}')
-                print(f'  Error:   {err}')
-                print(f'  Int Err: {interr}')
 

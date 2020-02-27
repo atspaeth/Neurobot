@@ -5,7 +5,8 @@ ffibuilder.cdef("""
         void setup();
         void cleanup();
         volatile extern bool g_please_die_kthxbai;
-        const float DT;
+        extern int g_dt_us;
+        float dt_ms();
         float read_adc(int channel_index);
         void apply_actuator(int i, float signed_fractional_activation);
         float get_current_time();
@@ -17,7 +18,6 @@ ffibuilder.cdef("""
 ffibuilder.set_source('neurobot_cffi', 
         """
         #include "libneurobot.h"
-        const float DT = DT_MS;
         """,
     libraries=['rt', 'pruio', 'neurobot'],
     library_dirs=['.'])

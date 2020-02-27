@@ -2,12 +2,24 @@ import numpy as np
 import neurobot_cffi 
 
 class Neurobot():
-    def __init__(self, pwm_max=20):
+    def __init__(self, dt_ms=None, pwm_max=20, datalog=None):
         self._nb = neurobot_cffi.lib
         self._nb.set_pwm_max(pwm_max)
-        self.DT = self._nb.DT
+
+        if dt_ms is not None:
+            self._nb.g_dt_us = int(dt_ms * 1e3)
+
+        if datalog is None:
+            self._logfile = None
+            self.log = lambda _: 0
+        else:
+            self._logfile = open(datalog, 'w')
+            self.log = self._logfile.write
+
+        self.dt_ms = self._nb.dt_ms
 
     def __enter__(self):
+        self.log('t')
         self._nb.setup()
         return self
 
@@ -18,10 +30,15 @@ class Neurobot():
         else:
             self._nb.print_final_time()
 
+        if self.log('\n'):
+            self._logfile.close()
+
         self._nb.cleanup()
 
     def event_loop(self):
         while not self._nb.g_please_die_kthxbai:
+            t = self._nb.get_current_time()
+            # self.log(f'\n{t}')
             yield self._nb.get_current_time()
             self._nb.synchronize_loop()
 

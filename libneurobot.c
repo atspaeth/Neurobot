@@ -14,7 +14,6 @@
 #include "libneurobot.h"
 
 
-
 /* Constant PWM frequency. */
 #define PWM_FREQ_HZ 200.f
 
@@ -60,7 +59,7 @@ struct timespec g_start_time, g_last_time;
 
 float get_current_time()
 {
-    return g_num_dts * DT_MS;
+    return g_num_dts * dt_ms();
 }
 
 void setup()
@@ -218,8 +217,8 @@ void resolve_dynamics(struct state *state, const struct params *param,
         float i_in)
 {
     struct state tmpstate = *state;
-    state_update(DT_MS/2, i_in, state, param, &tmpstate);
-    state_update(DT_MS, i_in, &tmpstate, param, state);
+    state_update(dt_ms()/2, i_in, state, param, &tmpstate);
+    state_update(dt_ms(), i_in, &tmpstate, param, state);
 }
 
 
@@ -272,6 +271,16 @@ void set_pwm_max(float percent) {
 }
 
 
+/* The simulation timestep. */
+int g_dt_us = 500;
+
+float dt_ms() {
+    return (float)g_dt_us / US_PER_MS;
+}
+
+
+static long g_total_sleep_us = 0;
+
 
 /* 
  * Check how long it has been, then sleep for the rest of the timestep.
@@ -287,14 +296,15 @@ void synchronize_loop()
         (this_time.tv_nsec - g_last_time.tv_nsec) / NS_PER_US
         + (this_time.tv_sec - g_last_time.tv_sec) * US_PER_SEC;
 
-    g_last_time.tv_nsec += LOOP_TIME_US * NS_PER_US;
+    g_last_time.tv_nsec += g_dt_us * NS_PER_US;
     if (g_last_time.tv_nsec > NS_PER_SEC) {
         g_last_time.tv_sec += 1;
         g_last_time.tv_nsec -= NS_PER_SEC;
     }
 
-    if (delta_t_us < LOOP_TIME_US) {
-        usleep(LOOP_TIME_US - delta_t_us);
+    if (delta_t_us < g_dt_us) {
+        g_total_sleep_us += g_dt_us - delta_t_us;
+        usleep(g_dt_us - delta_t_us);
     } 
 
     g_num_dts++;
@@ -311,7 +321,9 @@ void print_final_time()
     fprintf(stderr, "Simulated %ld steps in %ldms.\n", 
             g_num_dts, delta_t_us / 1000);
     fprintf(stderr, " (Timestep %ldμs actual, %dμs nominal.)\n",
-            delta_t_us / g_num_dts, DT_US);
+            delta_t_us / g_num_dts, g_dt_us);
+    fprintf(stderr, " (Slept on average %ldμs per step.)\n",
+            g_total_sleep_us / g_num_dts);
 }
 
 

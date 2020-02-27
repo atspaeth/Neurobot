@@ -9,11 +9,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-/* The simulation timestep. */
-#define DT_US (US_PER_MS/2)
-#define DT_MS ((float)DT_US / US_PER_MS)
-#define LOOP_TIME_US (DT_US)
-
 /* Time conversion constants. */
 #define NS_PER_US 1000
 #define US_PER_MS 1000
@@ -21,6 +16,9 @@
 #define US_PER_SEC (US_PER_MS * MS_PER_SEC)
 #define NS_PER_SEC (NS_PER_US * US_PER_SEC)
 
+/* The simulation timestep. */
+extern int g_dt_us;
+float dt_ms();
 
 struct state {
     float v, u, i, j;
