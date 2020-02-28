@@ -56,6 +56,9 @@ def module_loop(*idces, Gfb, Gffw):
 class CPGBase(Organoid):
     def __init__(self, G, is_excitatory, n_neurons):
 
+        self.cell_types = ['rs' if exc else 'lts' 
+                           for exc in is_excitatory]
+
         a, b, c, d, C, k, Vr, Vt, Vp, Vn, tau = \
                 np.where(is_excitatory[:,None], 
                         NEURON_TYPES['rs'], 
@@ -86,6 +89,31 @@ class CPGBase(Organoid):
         
     def start(self):
         self.fired[0] = True
+
+    def dump_source(self):
+        """
+        Prints the connectivity and parameters as C source code.
+        """
+        print(f'#define N_CELLS {self.N}\n')
+
+        for type in set(self.cell_types):
+            a, b, c, d, C, k, vr, vt, vp, vn, tau = NEURON_TYPES[type]
+            print(f'const struct params {type.upper()} ( {{')
+            print(f'  .a={a}, .b={b}, .c={c}, .d={d},')
+            print(f'  .C={C}, .k={k}, .tau={tau},')
+            print(f'  .vr={vr}, .vt={vt}, .vp={vp}, .vn={vn}')
+            print(f'}};\n')
+
+        print('\nconst struct params *params[N_CELLS] = {')
+        for i,type in enumerate(self.cell_types):
+            print(f'  [{i}] = &{type.upper()},')
+        print('};\n')
+
+        print('const float G[N_CELLS][N_CELLS] = {{')
+        for (i,j),gij in np.ndenumerate(self.G):
+            if gij != 0:
+                print(f'\t[{i}][{j}] = {gij},')
+        print(f'}};')
         
              
 class SingleCPG(CPGBase):
@@ -109,7 +137,6 @@ class SingleCPG(CPGBase):
         
     def muscle_activations(self):
         return np.clip(self.V[-4:] - np.roll(self.V[-4:], 2), -1, 1)
-
 
 class SingleFeedbackCPG(SingleCPG):
     def propriocept(self, pos):
