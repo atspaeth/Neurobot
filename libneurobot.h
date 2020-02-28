@@ -20,24 +20,17 @@
 extern int g_dt_us;
 float dt_ms();
 
+/* Each neuron's state variables. */
 struct state {
     float v, u, i, j;
 };
 
+/* Parameters per cell type. */
 struct params {
     float C, k, tau;
     float a, b, c, d;
-    float vr, vt, vp;
+    float vr, vt, vp, vn;
 };
-
-/* 
- * Designated initializers don't support weird ranges, and I want the
- * parameters to be constant, so do something really freaky: define the
- * parameters for the two types as constant structs.
- */
-#define RS {.a=0.03,.b=-2,.c=-50,.d=100,.C=100,.k=0.7,.vr=-60,.vt=-40,.vp=25,.tau=5}
-#define LTS {.a=0.03,.b=8,.c=-53,.d=20,.C=100,.k=1,.vr=-56,.vt=-42,.vp=25,.tau=20}
-
 
 
 void state_update(float dt, float i_in, 

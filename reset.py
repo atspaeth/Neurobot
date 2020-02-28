@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 import numpy as np
 from neurobot import Neurobot
-import os
+import os, sys
 from itertools import chain
 
 if __name__ == '__main__':
@@ -31,17 +31,17 @@ if __name__ == '__main__':
         # Emit a list of the variables to be logged.
         nb.log(',A0,A1,A2,A3,C0,C1,C2,C3')
 
-        print('Starting simulation...')
+        print('Starting simulation...', file=sys.stderr)
+
         interr = np.zeros(4)
         for t in nb.event_loop():
-
             pos = nb.read_adcs()
 
             err = pos - 0.5
             control = -kp*err - ki*interr
-            interr += nb.dt_ms()/tau*(err - interr)
+            interr += nb.dt/tau*(err - interr)
 
-            # Emit the actual values of the variables.
+            # Emit the actual values of the variables. 
             nb.log(f',{pos[0]},{pos[1]},{pos[2]},{pos[3]},{control[0]},{control[1]},{control[2]},{control[3]}')
 
             # nb.apply_actuators(control)

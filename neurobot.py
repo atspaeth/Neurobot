@@ -8,6 +8,7 @@ class Neurobot():
 
         if dt_ms is not None:
             self._nb.g_dt_us = int(dt_ms * 1e3)
+        self.dt = self._nb.dt_ms()
 
         if datalog is None:
             self._logfile = None
@@ -16,7 +17,10 @@ class Neurobot():
             self._logfile = open(datalog, 'w')
             self.log = self._logfile.write
 
-        self.dt_ms = self._nb.dt_ms
+        # Microoptimization: save 100 microseconds per reading of the
+        # four ADCs by avoiding creating a new numpy array from a list
+        # comprehension each time we read the ADCs.
+        self._pos = np.zeros(4)
 
     def __enter__(self):
         self.log('t')
@@ -38,12 +42,14 @@ class Neurobot():
     def event_loop(self):
         while not self._nb.g_please_die_kthxbai:
             t = self._nb.get_current_time()
-            # self.log(f'\n{t}')
+            self.log(f'\n{t}')
             yield self._nb.get_current_time()
             self._nb.synchronize_loop()
 
     def read_adcs(self):
-        return np.array([self._nb.read_adc(i) for i in range(4)])
+        for i in range(4):
+            self._pos[i] = self._nb.read_adc(i)
+        return self._pos
 
     def apply_actuators(self, control):
         for i,c in enumerate(control):
